@@ -7,8 +7,16 @@ SilverStripe\Control\Director:
     'saml': SilverStripe\ActiveDirectory\Control\SAMLController
 
 SilverStripe\Security\Member:
-  extensions:
-    - SilverStripe\ActiveDirectory\Extensions\SAMLMemberExtension
+  #extensions:
+  #  - SilverStripe\ActiveDirectory\Extensions\SAMLMemberExtension
+  claims_field_mappings:
+        'firstname': 'FirstName'
+        'lastname': 'Surname'
+        'email': 'Email'
+        ## IdP test server mapping
+        #'User.FirstName': 'FirstName'
+        #'User.LastName': 'Surname'
+        #'User.email': 'Email'
 
 SilverStripe\Security\Security:
   extensions:
@@ -22,7 +30,19 @@ SilverStripe\ActiveDirectory\Authenticators\SAMLAuthenticator:
 
 SilverStripe\ActiveDirectory\Services\SAMLConfiguration:
   strict: true
-  debug: false
+  debug: true
+  SP:
+    entityId: "http://cpac-staging.cphcloud.com"
+  IdP:
+    entityId: "https://sso.cancerview.ca"
+    x509cert: "activedirectory/_config/idp.crt"
+    singleSignOnService: "https://sso.cancerview.ca/EmpowerIDv5/Security/Saml/AuthenticateResponse"
+    singleLogoutService: "https://sso.cancerview.ca/EmpowerIDWebIdpForms/Logout?ReturnURL=http://cpac-staging.cphcloud.com/"
+    ## Test IdP
+    #entityId: "https://app.onelogin.com/saml/metadata/615968"
+    #x509cert: "activedirectory/_config/test_idp.crt"
+    #singleSignOnService: "https://sgarcia-us-preprod.onelogin.com/trust/saml2/http-post/sso/615968"
+    #singleLogoutService: "https://sgarcia-us-preprod.onelogin.com/trust/saml2/http-redirect/slo/615968"
   Security:
     # Algorithm that the toolkit will use on signing process. Options:
     #  - 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'

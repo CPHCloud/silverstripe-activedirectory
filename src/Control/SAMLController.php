@@ -10,8 +10,9 @@ use SilverStripe\Control\Director;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\Form;
-use SilverStirpe\Security\Member;
+use SilverStripe\Security\Member;
 use SilverStripe\Security\Security;
+use SilverStripe\ORM\ValidationResult;
 
 /**
  * Class SAMLController
@@ -36,6 +37,46 @@ class SAMLController extends Controller
     ];
 
     /**
+     * Login
+     *
+     * @throws OneLogin_Saml2_Error
+     */
+    public function login()
+    {
+        // Instead of sending AuthNRequest, let's send
+        // a redirection to the IdP-initiaited SSO endpoint
+        //$auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
+        //$auth->login();
+        $idpSSOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdPForms/Login/ppdadmin-stg';
+
+        return $this->redirect($idpSSOURL);
+    }
+
+    /**
+     * Login
+     *
+     * @throws OneLogin_Saml2_Error
+     */
+    public function logout()
+    {
+        // Instead of sending AuthNRequest, let's send
+        // a redirection to the IdP-initiaited SSO endpoint
+        // $auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
+        // $auth->logout();
+        if (array_key_exists('logged', $_GET) && $_GET['logged'] == 0) {
+            $member = Member::currentUser();
+            if ($member) {
+                $member->logOut();
+            }
+            return $this->getRedirect();
+        }
+
+        $idpSLOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdpForms/Logout?ReturnURL=http://cpac-staging.cphcloud.com/saml/logout?logged=0';
+        
+        return $this->redirect($idpSLOURL);
+    }
+
+    /**
      * Assertion Consumer Service
      *
      * The user gets sent back here after authenticating with the IdP, off-site.
@@ -50,26 +91,39 @@ class SAMLController extends Controller
     public function acs()
     {
         $auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
-        $auth->processResponse();
 
-        $error = $auth->getLastErrorReason();
-        if (!empty($error)) {
+        try {
+            $auth->processResponse();
+        } catch (Exception $e) {
+            $error = $e->getMessage();
             $this->getLogger()->error($error);
-            Form::messageForForm('SAMLLoginForm_LoginForm', "Authentication error: '{$error}'", 'bad');
+            Form::setMessage('SAMLLoginForm_LoginForm', "Authentication error: '{$error}'", ValidationResult::CAST_TEXT);
+            Session::save();
+            return $this->getRedirect();
+        }
+
+        $errors = $auth->getErrors();
+        if (!empty($errors)) {
+            $error = $auth->getLastErrorReason();
+            $this->getLogger()->error($error);
+            Form::setMessage('SAMLLoginForm_LoginForm', "Authentication error: '{$error}'", ValidationResult::CAST_TEXT);
             Session::save();
             return $this->getRedirect();
         }
 
         if (!$auth->isAuthenticated()) {
-            Form::messageForForm('SAMLLoginForm_LoginForm', _t('Member.ERRORWRONGCRED'), 'bad');
+            $this->setMessage('SAMLLoginForm_LoginForm', _t('Member.ERRORWRONGCRED'), ValidationResult::CAST_TEXT);
             Session::save();
             return $this->getRedirect();
         }
 
+        /*
+           // STUFF related to LDAP that we can't use
+
         $decodedNameId = base64_decode($auth->getNameId());
         // check that the NameID is a binary string (which signals that it is a guid
         if (ctype_print($decodedNameId)) {
-            Form::messageForForm('SAMLLoginForm_LoginForm', 'Name ID provided by IdP is not a binary GUID.', 'bad');
+            Form::setMessage('SAMLLoginForm_LoginForm', 'Name ID provided by IdP is not a binary GUID.', 'bad');
             Session::save();
             return $this->getRedirect();
         }
@@ -79,7 +133,7 @@ class SAMLController extends Controller
         if (!LDAPUtil::validGuid($guid)) {
             $errorMessage = "Not a valid GUID '{$guid}' recieved from server.";
             $this->getLogger()->error($errorMessage);
-            Form::messageForForm('SAMLLoginForm_LoginForm', $errorMessage, 'bad');
+            Form::setMessage('SAMLLoginForm_LoginForm', $errorMessage, ValidationResult::CAST_TEXT);
             Session::save();
             return $this->getRedirect();
         }
@@ -92,9 +146,12 @@ class SAMLController extends Controller
             $member->GUID = $guid;
         }
 
+        */
         $attributes = $auth->getAttributes();
+        $mapping = Member::config()->claims_field_mappings;
 
-        foreach ($member->config()->claims_field_mappings as $claim => $field) {
+        $userData = array();
+        foreach ($mapping as $claim => $field) {
             if (!isset($attributes[$claim][0])) {
                 $this->getLogger()->warn(
                     sprintf(
@@ -102,11 +159,26 @@ class SAMLController extends Controller
                         $claim
                     )
                 );
-
                 continue;
             }
+            $userData[$field] = $attributes[$claim][0];
+        }
 
-            $member->$field = $attributes[$claim][0];
+        if (!isset($userData['Email'])) {
+            $error = "Email was not provided by IdP. Review internal mapping or IdP settings";
+            $this->getLogger()->error($error);
+            Form::setMessage('SAMLLoginForm_LoginForm', "Authentication error: '{$error}'", ValidationResult::CAST_TEXT);
+        }
+
+        $member = Member::get()->filter('Email', $userData['Email'])->limit(1)->first();
+        if (!($member && $member->exists())) {
+            $member = new Member();
+            $member->Email = $userData['Email'];
+        }
+        foreach ($userData as $field => $value) {
+            if ($field != 'Email') {
+                $member->$field = $value;
+            }
         }
 
         $member->SAMLSessionIndex = $auth->getSessionIndex();
@@ -119,6 +191,37 @@ class SAMLController extends Controller
         $member->logIn();
 
         return $this->getRedirect();
+    }
+
+   /**
+     * Single Logout Service
+     *
+     * @throws OneLogin_Saml2_Error
+     */
+    public function sls()
+    {
+        $auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
+
+        // TODO I need to execute local logout instead
+        // clean the session
+        $auth->processSLO();
+
+        $errors = $auth->getErrors();
+        if (!empty($errors)) {
+            $error = $auth->getLastErrorReason();
+            $this->getLogger()->error($error);
+            $this->setMessage('SAMLLoginForm_LoginForm', "Authentication error: '{$error}'", 'bad');
+            Session::save();
+            return $this->getRedirect();
+        } else {
+            $member = Member::currentUser();
+            if ($member) {
+                $member->logOut();
+            }
+
+            // Successfully logged out
+            return $this->getRedirect();
+        }
     }
 
     /**
