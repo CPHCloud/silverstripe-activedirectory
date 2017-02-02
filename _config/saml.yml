@@ -33,6 +33,8 @@ SilverStripe\ActiveDirectory\Services\SAMLConfiguration:
   debug: true
   SP:
     entityId: "http://cpac-staging.cphcloud.com"
+    x509cert: "activedirectory/_config/idp.crt"
+    privateKey: "activedirectory/_config/idp.crt"
   IdP:
     entityId: "https://sso.cancerview.ca"
     x509cert: "activedirectory/_config/idp.crt"
