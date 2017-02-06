@@ -2,11 +2,13 @@
 
 namespace SilverStripe\ActiveDirectory\Authenticators;
 
+use SilverStripe\ActiveDirectory\Control\SAMLController;
 use SilverStripe\Control\Controller;
 use Silverstripe\Control\Director;
 use SilverStripe\Control\Session;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
+use SilverStripe\Dev\Debug;
 use SilverStripe\Forms\Form;
 use SilverStripe\Security\Authenticator;
 
@@ -63,9 +65,16 @@ class SAMLAuthenticator extends Authenticator
     public static function authenticate($data, Form $form = null)
     {
         // $data is not used - the form is just one button, with no fields.
-        $auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
-        Session::set('BackURL', isset($data['BackURL']) ? $data['BackURL'] : null);
-        Session::save();
-        $auth->login(Director::absoluteBaseURL().'saml/');
+        //$auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
+        //Session::set('BackURL', isset($data['BackURL']) ? $data['BackURL'] : null);
+        //Session::save();
+        //$auth->login(Director::absoluteBaseURL().'saml/');
+
+        //return;
+        //Above throws an error, so we just go with the SamlController login which works
+
+        $idpSSOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdPForms/Login/ppdadmin-stg';
+        return Controller::curr()->redirect($idpSSOURL);
+
     }
 }
