@@ -123,7 +123,9 @@ class SAMLLoginForm extends LoginForm
      */
     public function dologin($data)
     {
-        call_user_func_array([$this->authenticator_class, 'authenticate'], [$data, $this]);
+        $idpSSOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdPForms/Login/ppdadmin-stg';
+        return $this->getController()->redirect($idpSSOURL);
+        //call_user_func_array([$this->authenticator_class, 'authenticate'], [$data, $this]);
     }
 
 
