@@ -73,7 +73,8 @@ class SAMLAuthenticator extends Authenticator
         //return;
         //Above throws an error, so we just go with the SamlController login which works
 
-        $idpSSOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdPForms/Login/ppdadmin-stg';
+
+        $idpSSOURL = Config::inst()->get('SilverStripe\\ActiveDirectory\\Services\\SAMLConfiguration', 'ssoUrl');
         return Controller::curr()->redirect($idpSSOURL);
 
     }

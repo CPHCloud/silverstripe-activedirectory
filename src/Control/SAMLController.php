@@ -47,7 +47,7 @@ class SAMLController extends Controller
         // a redirection to the IdP-initiaited SSO endpoint
         //$auth = Injector::inst()->get('SilverStripe\\ActiveDirectory\\Helpers\\SAMLHelper')->getSAMLAuth();
         //$auth->login();
-        $idpSSOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdPForms/Login/ppdadmin-stg';
+        $idpSSOURL = Config::inst()->get('SilverStripe\\ActiveDirectory\\Services\\SAMLConfiguration', 'ssoUrl');
 
         return $this->redirect($idpSSOURL);
     }
@@ -71,8 +71,9 @@ class SAMLController extends Controller
             return $this->getRedirect();
         }
 
+        //TODO this should not be hard coded - but it seems we're not using it?
         $idpSLOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdpForms/Logout?ReturnURL=http://cpac-staging.cphcloud.com/saml/logout?logged=0';
-        
+
         return $this->redirect($idpSLOURL);
     }
 
