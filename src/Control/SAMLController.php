@@ -8,6 +8,7 @@ use SilverStripe\ActiveDirectory\Model\LDAPUtil;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Session;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\Form;
 use SilverStripe\Security\Member;
@@ -71,8 +72,7 @@ class SAMLController extends Controller
             return $this->getRedirect();
         }
 
-        //TODO this should not be hard coded - but it seems we're not using it?
-        $idpSLOURL = 'https://sso.cancerview.ca/EmpowerIDWebIdpForms/Logout?ReturnURL=http://cpac-staging.cphcloud.com/saml/logout?logged=0';
+        $idpSLOURL = Config::inst()->get('SilverStripe\\ActiveDirectory\\Services\\SAMLConfiguration', 'ssoLogoutUrl');
 
         return $this->redirect($idpSLOURL);
     }
