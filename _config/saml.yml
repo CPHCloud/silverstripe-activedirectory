@@ -6,9 +6,9 @@ SilverStripe\Control\Director:
   rules:
     'saml': SilverStripe\ActiveDirectory\Control\SAMLController
 
-SilverStripe\Security\Member:
-  #extensions:
-  #  - SilverStripe\ActiveDirectory\Extensions\SAMLMemberExtension
+#SilverStripe\Security\Member:
+#  extensions:
+#    - SilverStripe\ActiveDirectory\Extensions\SAMLMemberExtension
 
 SilverStripe\Security\Security:
   extensions:
